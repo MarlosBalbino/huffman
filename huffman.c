@@ -2,14 +2,14 @@
 #include <string.h>
 #include <stdlib.h>
 
-int* open_file_and_count_chars(int *ascii)
+void open_file_and_count_chars(int *ascii)
 {
     FILE *file = fopen("test.txt", "r");
 
     if(file == NULL)
     {
         printf("Deu merda");
-        return 0;
+        return;
     }
 
     char x;
