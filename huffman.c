@@ -2,10 +2,8 @@
 #include <string.h>
 #include <stdlib.h>
 
-void open_file_and_count_chars(int *ascii)
+void count_chars(int *ascii, FILE *file)
 {
-    FILE *file = fopen("test.txt", "r");
-
     if(file == NULL)
     {
         printf("Deu merda");
@@ -110,9 +108,37 @@ void create_huffman_binary_tree(priority_queue *pq)
     aux->next = NULL;
 }
 
+void print_results(int *bin, int array_size, char item)
+{
+    printf("%c: ", item);
+    for(int i = 0; i < array_size; i++)
+    {
+        printf("%d ", bin[i]);
+    }
+    printf("\n");
+}
+
+void set_path_to_hash_table(node *bt, int *bin, int i)
+{
+    
+    if (bt->left != NULL && bt->right != NULL) 
+    {
+        bin[i] = 0;
+        set_path_to_hash_table(bt->left, bin, i + 1);
+        bin[i] = 1;
+        set_path_to_hash_table(bt->right, bin, i + 1);
+    }
+    else
+    {
+        print_results(bin, i, bt->item);
+    }
+    
+}
+
 void print_binary_tree_pre_order(node *bt)
 {
-    if (bt != NULL) {
+    if (bt != NULL) 
+    {
         printf("%c", bt->item);
         print_binary_tree_pre_order(bt->left);
         print_binary_tree_pre_order(bt->right);
@@ -121,17 +147,35 @@ void print_binary_tree_pre_order(node *bt)
 
 int main()
 {
+    FILE *file = fopen("test.txt", "r");
     int ascii[256] = {0};
 
-    open_file_and_count_chars(ascii);
+    count_chars(ascii, file);
     priority_queue *pq = create_empty_priority_queue();
     put_chars_in_priority_queue(ascii, pq);
     create_huffman_binary_tree(pq);
 
-    node *aux = pq->head;
+    int bin[256];
+    set_path_to_hash_table(pq->head, bin, 0);
 
-    //imprime arvore binaria
-    print_binary_tree_pre_order(aux);
+
+    print_binary_tree_pre_order(pq->head);
+    printf("\n");
+
+    // rewind(file);
+    // FILE *file_out = fopen("compress.txt", "w");
+    // char x;
+    
+    //  while(fscanf(file, "%c", &x) != EOF)
+    // {
+    //     fprintf(file_out, "%c", x);
+    // }
+
+    
+   
+   
+
+
 
 
 
