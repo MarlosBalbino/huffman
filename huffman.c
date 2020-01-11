@@ -2,22 +2,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-void count_chars(int *ascii, FILE *file)
-{
-    if(file == NULL)
-    {
-        printf("Deu merda");
-        return;
-    }
-
-    char x;
-    
-    while(fscanf(file, "%c", &x) != EOF)
-    {
-        ascii[x]++;
-    }
-}
-
 typedef struct node node;
 struct node
 {
@@ -32,6 +16,18 @@ typedef struct priority_queue
 {
     node *head;
 }priority_queue;
+
+typedef struct element element;
+struct element
+{
+	int value;
+	element *next;
+};
+
+typedef struct hash_table
+{
+	element *table[256];
+}hash_table;
 
 priority_queue* create_empty_priority_queue()
 {
@@ -67,6 +63,42 @@ node* create_new_node(char i, int p, node *left, node *right)
     new_node->left = left;
     new_node->right = right;
     return new_node;
+}
+
+hash_table* create_hash_table()
+{
+	hash_table *new_hash_table = (hash_table*) malloc(sizeof(hash_table));
+
+	
+	for(int i = 0; i < 256; i++)
+	{
+		new_hash_table->table[i] = NULL;
+	}
+	return new_hash_table;
+}
+
+element* create_new_element(int value) 
+{
+	element *new_element = (element*) malloc(sizeof(element));
+	new_element->value = value;
+	new_element->next = NULL;
+	return new_element;
+}
+
+void count_chars(int *ascii, FILE *file)
+{
+    if(file == NULL)
+    {
+        printf("Deu merda");
+        return;
+    }
+
+    char x;
+    
+    while(fscanf(file, "%c", &x) != EOF)
+    {
+        ascii[x]++;
+    }
 }
 
 priority_queue* put_chars_in_priority_queue(int *ascii, priority_queue *pq)
@@ -108,31 +140,55 @@ void create_huffman_binary_tree(priority_queue *pq)
     aux->next = NULL;
 }
 
-void print_results(int *bin, int array_size, char item)
-{
-    printf("%c: ", item);
-    for(int i = 0; i < array_size; i++)
-    {
-        printf("%d ", bin[i]);
-    }
-    printf("\n");
+void set_path_to_hash_table(char key, hash_table *ht, int *binary_path, int path_size)
+{    
+	element *new_element = NULL;
+	element *current = NULL;
+
+	for(int i = 0; i < path_size; i++) 
+	{
+		new_element = create_new_element(binary_path[i]);
+
+		if(ht->table[key] != NULL)
+		{
+			current->next = new_element;
+			current = new_element;
+		}
+		else
+		{
+			ht->table[key] = new_element;
+			current = new_element;			
+		}
+	}	
 }
 
-void set_path_to_hash_table(node *bt, int *bin, int i)
+void create_path_to_hash_table(node *bt, hash_table *ht, int *binary_path, int path_size)
 {
     
     if (bt->left != NULL && bt->right != NULL) 
     {
-        bin[i] = 0;
-        set_path_to_hash_table(bt->left, bin, i + 1);
-        bin[i] = 1;
-        set_path_to_hash_table(bt->right, bin, i + 1);
+        binary_path[path_size] = 0;
+        create_path_to_hash_table(bt->left, ht, binary_path, path_size + 1);
+        binary_path[path_size] = 1;
+        create_path_to_hash_table(bt->right, ht, binary_path, path_size + 1);
     }
     else
     {
-        print_results(bin, i, bt->item);
-    }
-    
+        set_path_to_hash_table(bt->item, ht, binary_path, path_size);
+    }    
+}
+
+void get(hash_table *ht, int key)
+{
+	element *current = ht->table[key];
+
+    printf("%c: ", key);
+	while(current != NULL)
+	{
+		printf("%d ", current->value);
+		current = current->next;
+	}
+    printf("\n");
 }
 
 void print_binary_tree_pre_order(node *bt)
@@ -155,9 +211,15 @@ int main()
     put_chars_in_priority_queue(ascii, pq);
     create_huffman_binary_tree(pq);
 
-    int bin[256];
-    set_path_to_hash_table(pq->head, bin, 0);
-
+    hash_table *ht = create_hash_table();
+    int binary_path[256];
+    create_path_to_hash_table(pq->head, ht, binary_path, 0);
+    get(ht, 'C');
+    get(ht, 'B');
+    get(ht, 'F');
+    get(ht, 'E');
+    get(ht, 'D');
+    get(ht, 'A');
 
     print_binary_tree_pre_order(pq->head);
     printf("\n");
