@@ -178,28 +178,94 @@ void create_path_to_hash_table(node *bt, hash_table *ht, int *binary_path, int p
     }    
 }
 
-void get(hash_table *ht, int key)
+void put_tree_in_the_file_out(node *bt, FILE *file_out)
 {
-	element *current = ht->table[key];
-
-    printf("%c: ", key);
-	while(current != NULL)
-	{
-		printf("%d ", current->value);
-		current = current->next;
-	}
-    printf("\n");
-}
-
-void print_binary_tree_pre_order(node *bt)
-{
-    if (bt != NULL) 
+    if (bt->left != NULL && bt->right != NULL)
     {
         printf("%c", bt->item);
-        print_binary_tree_pre_order(bt->left);
-        print_binary_tree_pre_order(bt->right);
+        if(bt->item == '*')
+        fputc(bt->item, file_out);
+        put_tree_in_the_file_out(bt->left, file_out);
+        put_tree_in_the_file_out(bt->right, file_out);
     }
+    else
+    {
+        printf("%c", bt->item);
+        if(bt->item == '*') fputc(92, file_out);
+        fputc(bt->item, file_out);
+    }    
 }
+
+// void get(hash_table *ht, int key)
+// {
+// 	element *current = ht->table[key];
+
+//     printf("%c: ", key);
+// 	while(current != NULL)
+// 	{
+// 		printf("%d ", current->value);
+// 		current = current->next;
+// 	}
+//     printf("\n");
+// }
+
+unsigned char set_bit(unsigned char c, int i)
+{
+	unsigned char mask = 0;
+	mask = 1 << i;
+	return mask | c;
+}
+
+void convert_chars(hash_table *ht, FILE *file, FILE *file_out)
+{
+    element *current = NULL;
+    char key;
+    int bit;
+    int i = 7;
+    unsigned char c = 0;
+
+    while(fscanf(file, "%c", &key) != EOF)
+    {        
+        printf("%c: ", key);
+        current = ht->table[key];
+        while(current != NULL)
+        {
+            
+            bit = current->value;
+            printf("%d ", bit);
+            current = current->next;
+
+            if(bit)
+            {
+                c = set_bit(c, i);
+            }            
+
+            if(i == 0)
+            {
+                fputc(c, file_out);
+                c = 0;
+                i = 8;
+            }
+
+            i--;
+        }  
+        printf("\n");
+    }
+    fputc(c, file_out);
+    //i + 1 é o lixo.
+    printf("lixo: %d\n", i+1);
+    
+}
+
+// void print_binary_tree_pre_order(node *bt)
+// {
+//     if (bt != NULL)
+//     {
+//         printf("%c", bt->item);
+//         print_binary_tree_pre_order(bt->left);
+//         print_binary_tree_pre_order(bt->right);
+//     }
+// }
 
 int main()
 {
@@ -214,25 +280,24 @@ int main()
     hash_table *ht = create_hash_table();
     int binary_path[256];
     create_path_to_hash_table(pq->head, ht, binary_path, 0);
-    get(ht, 'C');
-    get(ht, 'B');
-    get(ht, 'F');
-    get(ht, 'E');
-    get(ht, 'D');
-    get(ht, 'A');
+    // get(ht, 'C');
+    // get(ht, 'B');
+    // get(ht, 'F');
+    // get(ht, 'E');
+    // get(ht, 'D');
+    // get(ht, 'A');
 
-    print_binary_tree_pre_order(pq->head);
+    rewind(file);
+    FILE *file_out = fopen("compress.txt", "w");
+
+    put_tree_in_the_file_out(pq->head, file_out);
     printf("\n");
 
-    // rewind(file);
-    // FILE *file_out = fopen("compress.txt", "w");
-    // char x;
-    
-    //  while(fscanf(file, "%c", &x) != EOF)
-    // {
-    //     fprintf(file_out, "%c", x);
-    // }
+    convert_chars(ht, file, file_out);
+        
 
+    //print_binary_tree_pre_order(pq->head);
+    printf("\n");
     
    
    
