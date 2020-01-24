@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+#pragma region structs
 typedef struct node node;
 struct node
 {
@@ -28,31 +29,14 @@ typedef struct hash_table
 {
 	element *table[256];
 }hash_table;
+#pragma endregion
 
+#pragma region nodes
 priority_queue* create_empty_priority_queue()
 {
     priority_queue *pq = (priority_queue*) malloc(sizeof(priority_queue));
     pq->head = NULL;
     return pq;
-}
-
-void enqueue(priority_queue *pq, node *new_node)
-{
-    if(pq->head == NULL || new_node->priority <= pq->head->priority)
-    {
-        new_node->next = pq->head;
-        pq->head = new_node;
-    }
-    else
-    {
-        node *current = pq->head;
-        while(current->next != NULL && current->next->priority < new_node->priority)
-        {
-            current = current->next;
-        }
-        new_node->next = current->next;
-        current->next = new_node;
-    }    
 }
 
 node* create_new_node(char i, int p, node *left, node *right)
@@ -84,6 +68,7 @@ element* create_new_element(int value)
 	new_element->next = NULL;
 	return new_element;
 }
+#pragma endregion
 
 void count_chars(int *ascii, FILE *file)
 {
@@ -99,6 +84,25 @@ void count_chars(int *ascii, FILE *file)
     {
         ascii[x]++;
     }
+}
+
+void enqueue(priority_queue *pq, node *new_node)
+{
+    if(pq->head == NULL || new_node->priority <= pq->head->priority)
+    {
+        new_node->next = pq->head;
+        pq->head = new_node;
+    }
+    else
+    {
+        node *current = pq->head;
+        while(current->next != NULL && current->next->priority < new_node->priority)
+        {
+            current = current->next;
+        }
+        new_node->next = current->next;
+        current->next = new_node;
+    }    
 }
 
 priority_queue* put_chars_in_priority_queue(int *ascii, priority_queue *pq)
@@ -162,38 +166,25 @@ void set_path_to_hash_table(char key, hash_table *ht, int *binary_path, int path
 	}	
 }
 
-void create_path_to_hash_table(node *bt, hash_table *ht, int *binary_path, int path_size)
-{
-    
+void write_bt_set_ht(node *bt, hash_table *ht, int *binary_path, int path_size, int *bt_size, FILE *file_out)
+{ 
+    (*bt_size)++;
     if (bt->left != NULL && bt->right != NULL) 
-    {
+    {        
+        fputc(bt->item, file_out);
         binary_path[path_size] = 0;
-        create_path_to_hash_table(bt->left, ht, binary_path, path_size + 1);
+        write_bt_set_ht(bt->left, ht, binary_path, path_size + 1, bt_size, file_out);
         binary_path[path_size] = 1;
-        create_path_to_hash_table(bt->right, ht, binary_path, path_size + 1);
+        write_bt_set_ht(bt->right, ht, binary_path, path_size + 1, bt_size, file_out);
     }
     else
     {
+            
+        if(bt->item == '*') fputc('\\', file_out), (*bt_size)++;        
+        if(bt->item == '\\') fputc('\\', file_out), (*bt_size)++;   
+        fputc(bt->item, file_out);
         set_path_to_hash_table(bt->item, ht, binary_path, path_size);
-    }    
-}
-
-void put_tree_in_the_file_out(node *bt, FILE *file_out)
-{
-    if (bt->left != NULL && bt->right != NULL)
-    {
-        printf("%c", bt->item);
-        if(bt->item == '*')
-        fputc(bt->item, file_out);
-        put_tree_in_the_file_out(bt->left, file_out);
-        put_tree_in_the_file_out(bt->right, file_out);
     }
-    else
-    {
-        printf("%c", bt->item);
-        if(bt->item == '*') fputc(92, file_out);
-        fputc(bt->item, file_out);
-    }    
 }
 
 // void get(hash_table *ht, int key)
@@ -216,23 +207,20 @@ unsigned char set_bit(unsigned char c, int i)
 	return mask | c;
 }
 
-void convert_chars(hash_table *ht, FILE *file, FILE *file_out)
+void compress(hash_table *ht, FILE *file, FILE *file_out, short bt_size)
 {
     element *current = NULL;
     char key;
     int bit;
     int i = 7;
     unsigned char c = 0;
-
     while(fscanf(file, "%c", &key) != EOF)
-    {        
-        printf("%c: ", key);
+    {    
+        printf("teste key: %c\n", key); 
         current = ht->table[key];
         while(current != NULL)
-        {
-            
+        {            
             bit = current->value;
-            printf("%d ", bit);
             current = current->next;
 
             if(bit)
@@ -246,15 +234,16 @@ void convert_chars(hash_table *ht, FILE *file, FILE *file_out)
                 c = 0;
                 i = 8;
             }
-
             i--;
         }  
-        printf("\n");
     }
     fputc(c, file_out);
-    //i + 1 é o lixo.
-    printf("lixo: %d\n", i+1);
-    
+    //rewind(file_out);
+    // char trash = i+1;
+	// char byte_1 = (trash<<5) | (bt_size>>8);
+	// char byte_2 = bt_size;
+	// fputc(byte_1, file_out);
+	// fputc(byte_2, file_out);
 }
 
 // void print_binary_tree_pre_order(node *bt)
@@ -269,35 +258,38 @@ void convert_chars(hash_table *ht, FILE *file, FILE *file_out)
 
 int main()
 {
-    FILE *file = fopen("test.txt", "r");
+    int bt_size = 0;
     int ascii[256] = {0};
-
+    int binary_path[256] = {0};
+    
+    FILE *file = fopen("test.jpg", "r");
+    FILE *file_out = fopen("compress.txt", "w");
+    
     count_chars(ascii, file);
+    rewind(file);
     priority_queue *pq = create_empty_priority_queue();
     put_chars_in_priority_queue(ascii, pq);
+    //printf("menor prioridade: %c \n", pq->head->item);
     create_huffman_binary_tree(pq);
-
     hash_table *ht = create_hash_table();
-    int binary_path[256];
-    create_path_to_hash_table(pq->head, ht, binary_path, 0);
-    // get(ht, 'C');
+    fputc(0, file_out);
+    fputc(0, file_out);
+    system("pause");
+    write_bt_set_ht(pq->head, ht, binary_path, 0, &bt_size, file_out);
+    printf("bt_size: %d\n", bt_size);
+    // get(ht, '*');
     // get(ht, 'B');
     // get(ht, 'F');
     // get(ht, 'E');
     // get(ht, 'D');
-    // get(ht, 'A');
-
-    rewind(file);
-    FILE *file_out = fopen("compress.txt", "w");
-
-    put_tree_in_the_file_out(pq->head, file_out);
-    printf("\n");
-
-    convert_chars(ht, file, file_out);
-        
+    // get(ht, 'A');  
+    compress(ht, file, file_out, bt_size);
+    printf("teste\n");
+    fclose(file);
+    fclose(file_out);
 
     //print_binary_tree_pre_order(pq->head);
-    printf("\n");
+    // printf("\n");
     
    
    
