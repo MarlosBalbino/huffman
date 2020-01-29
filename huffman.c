@@ -1,6 +1,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
+
+#define progress_bar 80
+unsigned long long f_sz; //file_size
+unsigned long long pr_frac; //progress_fraction: tamanho do arquivo divido pela barra de progresso; fração do arquivo (em bytes) correspondente a um incremento na barra de progresso.
 
 #pragma region structs
 typedef struct node node;
@@ -77,13 +82,22 @@ void count_chars(int *ascii, FILE *file)
         printf("Deu merda");
         return;
     }
+    
+    pr_frac = f_sz/progress_bar;
+    unsigned long long f_pos = 0;
+
+    for(int j = 0; j < progress_bar; j++) printf("_");
+    printf("\n");
 
     char x;
     
     while(fscanf(file, "%c", &x) != EOF)
     {
+        f_pos++;
+        if( f_pos % pr_frac == 0) printf("|");
         ascii[x]++;
     }
+    rewind(file);
 }
 
 void enqueue(priority_queue *pq, node *new_node)
@@ -180,25 +194,12 @@ void write_bt_set_ht(node *bt, hash_table *ht, int *binary_path, int path_size, 
     else
     {
             
-        if(bt->item == '*') fputc('\\', file_out), (*bt_size)++;        
-        if(bt->item == '\\') fputc('\\', file_out), (*bt_size)++;   
+        if(bt->item == '*') fputc('\\', file_out), (*bt_size)++;
+        if(bt->item == '\\') fputc('\\', file_out), (*bt_size)++;
         fputc(bt->item, file_out);
         set_path_to_hash_table(bt->item, ht, binary_path, path_size);
     }
 }
-
-// void get(hash_table *ht, int key)
-// {
-// 	element *current = ht->table[key];
-
-//     printf("%c: ", key);
-// 	while(current != NULL)
-// 	{
-// 		printf("%d ", current->value);
-// 		current = current->next;
-// 	}
-//     printf("\n");
-// }
 
 unsigned char set_bit(unsigned char c, int i)
 {
@@ -210,13 +211,18 @@ unsigned char set_bit(unsigned char c, int i)
 void compress(hash_table *ht, FILE *file, FILE *file_out, short bt_size)
 {
     element *current = NULL;
-    char key;
     int bit;
     int i = 7;
+    unsigned char key;
     unsigned char c = 0;
+    unsigned long long f_pos = 0;
+    pr_frac = f_sz/progress_bar;
+
+    for(int j = 0; j < progress_bar; j++) printf("_");
+    printf("\n");
+
     while(fscanf(file, "%c", &key) != EOF)
     {    
-        printf("teste key: %c\n", key); 
         current = ht->table[key];
         while(current != NULL)
         {            
@@ -235,69 +241,62 @@ void compress(hash_table *ht, FILE *file, FILE *file_out, short bt_size)
                 i = 8;
             }
             i--;
-        }  
+        }
+        f_pos++;
+        if(f_pos % pr_frac == 0) printf("|");
     }
     fputc(c, file_out);
-    //rewind(file_out);
-    // char trash = i+1;
-	// char byte_1 = (trash<<5) | (bt_size>>8);
-	// char byte_2 = bt_size;
-	// fputc(byte_1, file_out);
-	// fputc(byte_2, file_out);
+    rewind(file_out);
+    char trash = i+1;
+	char byte_1 = (trash<<5) | (bt_size>>8);
+	char byte_2 = bt_size;
+	fputc(byte_1, file_out);
+	fputc(byte_2, file_out);
 }
-
-// void print_binary_tree_pre_order(node *bt)
-// {
-//     if (bt != NULL)
-//     {
-//         printf("%c", bt->item);
-//         print_binary_tree_pre_order(bt->left);
-//         print_binary_tree_pre_order(bt->right);
-//     }
-// }
 
 int main()
 {
+    time_t tic, toc;
+    time(&tic);
+
     int bt_size = 0;
     int ascii[256] = {0};
     int binary_path[256] = {0};
     
-    FILE *file = fopen("test.jpg", "r");
-    FILE *file_out = fopen("compress.txt", "w");
-    
-    count_chars(ascii, file);
+    FILE *file = fopen("aquaman.jpg", "rb");
+    FILE *file_out = fopen("compress.txt", "wb");
+
+    fseek(file, 0, 2); //verificar tamanho do arquivo original
+    f_sz = ftell(file);
     rewind(file);
+    
+    printf("\n\nCounting occurrence of characters . . .\n");
+    count_chars(ascii, file);    
     priority_queue *pq = create_empty_priority_queue();
     put_chars_in_priority_queue(ascii, pq);
-    //printf("menor prioridade: %c \n", pq->head->item);
     create_huffman_binary_tree(pq);
     hash_table *ht = create_hash_table();
     fputc(0, file_out);
     fputc(0, file_out);
-    system("pause");
     write_bt_set_ht(pq->head, ht, binary_path, 0, &bt_size, file_out);
-    printf("bt_size: %d\n", bt_size);
-    // get(ht, '*');
-    // get(ht, 'B');
-    // get(ht, 'F');
-    // get(ht, 'E');
-    // get(ht, 'D');
-    // get(ht, 'A');  
-    compress(ht, file, file_out, bt_size);
-    printf("teste\n");
+    printf("\nbt_size: %d", bt_size);
+
+    printf("\n\nCompressing . . .\n");
+    compress(ht, file, file_out, bt_size);    
+
+    printf("\n\nCONCLUDED\n");
+
+    fseek(file_out, 0, 2); //verificar tamanho do arquivo comprimido
+    unsigned long long comp_sz = ftell(file_out);
+
     fclose(file);
     fclose(file_out);
 
-    //print_binary_tree_pre_order(pq->head);
-    // printf("\n");
+    time(&toc);
+    printf("Elapsed Time: %.f Seconds\nOriginal Size: %lld Bytes\nCompressed Size: %lld Bytes\nCompression Ratio: %.2lf%%\n\n\n", 
+    difftime(toc, tic), f_sz, comp_sz, (double)(f_sz-comp_sz)/f_sz*100);
+
     
-   
-   
-
-
-
-
-
 
     return 0;
 }
