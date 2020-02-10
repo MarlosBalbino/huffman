@@ -120,7 +120,7 @@ void decompress()
 {
     char output_file[50];
     printf("\nType output file name:\n");
-    scanf("%s", &output_file);
+    scanf("%s", output_file);
 
     FILE *compressed_file = fopen("compressed.huff", "rb");
     if(compressed_file == NULL)
