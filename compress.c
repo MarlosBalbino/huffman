@@ -243,7 +243,7 @@ void compress()
     char file_name[50];
 
     printf("\nType file name:\n");
-    scanf("%s", &file_name);
+    scanf("%s", file_name);
 
     FILE *file = fopen(file_name, "rb");
     if(file == NULL)
